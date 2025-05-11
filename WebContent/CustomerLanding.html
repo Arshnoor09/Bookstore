@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - QuillQuest</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+	     body::before {
+			    content: "";
+			    position: fixed;
+			    top: 0;
+			    left: 0;
+			    width: 100%;
+			    height: 100%;
+			    background-image: url('https://png.pngtree.com/background/20230522/original/pngtree-stack-of-books-on-top-of-a-table-picture-image_2695945.jpg');
+			    background-size: cover;
+			    background-position: center;
+			    filter: blur(6px);  /* Adjust blur intensity */
+			    z-index: -1;
+			}	
+			
+			body {
+			    font-family: 'Segoe UI', sans-serif;
+			    margin: 0;
+			    padding: 0;
+			    min-height: 100vh;
+			    overflow-x: hidden;
+			    display: flex;
+			    flex-direction: column;
+			    position: relative;
+			    z-index: 0;
+			}
+			
+        .navbar {
+            padding: 0.5rem 1rem;
+            background: #343a40 !important;
+            height: 60px;
+            margin-bottom: 20px;
+        }
+
+        .navbar-brand img {
+            height: 40px;
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .store-name {
+            color: #f0f0f0;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .navbar-nav .nav-link {
+            color: white !important;
+            font-weight: 500;
+            margin: 0 1rem;
+            position: relative;
+            font-size: 16px;
+        }
+
+        .navbar-nav .nav-link.active {
+            color: #00c6ff !important;
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #f0f0f0;
+        }
+
+        .welcome-card, .content-paragraph {
+            max-width: 600px;
+            margin: 60px auto;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .welcome-card h1, .content-paragraph h2 {
+            font-size: 2.5rem;
+            color: #343a40;
+            margin-bottom: 20px;
+        }
+
+        .welcome-card p, .content-paragraph p {
+            font-size: 1.2rem;
+            color: #555;
+        }
+
+        .book-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 30px;
+            gap: 15px;
+        }
+
+        .book-gallery img {
+            width: 150px;
+            height: 220px;
+            object-fit: cover;
+            border: 2px solid #343a40;
+            border-radius: 8px;
+            transition: transform 0.3s ease, opacity 0.3s ease;  /* Added transition */
+        }
+
+        /* Hover animation for book images */
+        .book-gallery img:hover {
+            transform: scale(1.3);  /* Increased scale factor */
+            opacity: 0.8;           /* Optional: gives a fading effect */
+        }
+
+        /* Optional: add some space below the content to help with scroll behavior */
+        .section-spacing {
+            padding: 60px 0;
+        }
+
+        .content-paragraph {
+            width: 80%;
+            margin: 60px auto;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-bottom: 60px; /* Added margin to push content further down */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <a class="navbar-brand" href="/onlinebookstore/">
+                <img src="logo.png" alt="Book Store Logo">
+                <span class="store-name">QuillQuest</span>
+            </a>
+            <button style="background-color:white;" class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="CustomerLanding.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="viewbook">Available Books</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link glyphicon glyphicon-shopping-cart" href="cart">Cart</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="orders" id="orders">Your Orders</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="about">About Us</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Welcome Card Section -->
+    <div class="welcome-card">
+        <h1>Welcome to QuillQuest</h1>
+        <p>Hello dear👋, We're excited to have you here! Explore, learn, and enjoy your reading journey.
+        Escape the ordinary. Dive into extraordinary reads today! Your next great read is only a page away. Let’s begin your journey!</p>
+    </div>
+
+    <!-- Book Gallery Section -->
+     <div class="book-gallery">
+        <img src="https://sp.yimg.com/ib/th?id=OPAC.mT%2bOEVlHNkwY1w474C474&o=5&pid=21.1&w=174&h=174" alt="Book 1">
+        <img src="https://sp.yimg.com/ib/th?id=OPAC.FuPf3Ig3hSEkQg474C474&o=5&pid=21.1&w=174&h=174" alt="Book 2">
+        <img src="https://m.media-amazon.com/images/I/81RkPGyExnL._AC_UY327_FMwebp_QL65_.jpg" alt="Book 3">
+        <img src="https://m.media-amazon.com/images/I/91uwocAMtSL.jpg" alt="Book 4">
+    </div>
+
+    <!-- Content Paragraph Section -->
+    <div class="content-paragraph">
+        <h2>Explore Our Collection</h2>
+        <p>At QuillQuest, we aim to bring you a curated selection of books to inspire, educate, and entertain. Our library covers all genres, including fiction, non-fiction, self-development, and more.</p>
+    </div>
+</body>
+</html>

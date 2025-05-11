@@ -2,14 +2,11 @@ package servlets;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.UUID;
-
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import com.bittercode.constant.BookStoreConstants;
 import com.bittercode.constant.db.BooksDBConstants;
 import com.bittercode.model.Book;
@@ -37,53 +34,71 @@ public class AddBookServlet extends HttpServlet {
         rd.include(req, res);
         StoreUtil.setActiveTab(pw, "addbook");
         pw.println("<div class='container my-2'>");
-        if(bName == null || bName.isBlank()) {
-            //render the add book form;
-            showAddBookForm(pw);
+
+        if (bName == null || bName.trim().isEmpty()) {
+            // Render the add book form without message
+            showAddBookForm(pw, "", "", "", "", "", false);  // Pass false since no message is shown
             return;
-        } //else process the add book
-        
- 
+        }
+
         try {
-            String uniqueID = UUID.randomUUID().toString();
-            String bCode = uniqueID;
+            String bCode = req.getParameter("bookCode");
+            if (bCode == null || bCode.trim().isEmpty()) {
+                bCode = java.util.UUID.randomUUID().toString();
+            }
+
             String bAuthor = req.getParameter(BooksDBConstants.COLUMN_AUTHOR);
-            double bPrice = Integer.parseInt(req.getParameter(BooksDBConstants.COLUMN_PRICE));
+            double bPrice = Double.parseDouble(req.getParameter(BooksDBConstants.COLUMN_PRICE));
             int bQty = Integer.parseInt(req.getParameter(BooksDBConstants.COLUMN_QUANTITY));
 
             Book book = new Book(bCode, bName, bAuthor, bPrice, bQty);
             String message = bookService.addBook(book);
+
             if ("SUCCESS".equalsIgnoreCase(message)) {
-                pw.println(
-                        "<table class=\"tab\"><tr><td>Book Detail Updated Successfully!<br/>Add More Books</td></tr></table>");
+                // Show success message
+                showAddBookForm(pw, "", "", "", "", "Book Added Successfully!", true);  // Pass true for success message
             } else {
-                pw.println("<table class=\"tab\"><tr><td>Failed to Add Books! Fill up CareFully</td></tr></table>");
-                //rd.include(req, res);
+                showAddBookForm(pw, bCode, bName, bAuthor, String.valueOf(bPrice), "Failed to Add Book! Please try again.", false);  // Pass false for failure message
             }
         } catch (Exception e) {
             e.printStackTrace();
-            pw.println("<table class=\"tab\"><tr><td>Failed to Add Books! Fill up CareFully</td></tr></table>");
+            showAddBookForm(pw, "", "", "", "", "Failed to Add Book! Fill up Carefully.", false);  // Pass false for failure message
         }
     }
-    
-    private static void showAddBookForm(PrintWriter pw) {
-        String form = "<table class=\"tab my-5\" style=\"width:40%;\">\r\n"
-                + "        <tr>\r\n"
-                + "            <td>\r\n"
-                + "                <form action=\"addbook\" method=\"post\">\r\n"
-                + "                    <!-- <label for=\"bookCode\">Book Code : </label><input type=\"text\" name=\"barcode\" id=\"bookCode\" placeholder=\"Enter Book Code\" required><br/> -->\r\n"
-                + "                    <label for=\"bookName\">Book Name : </label> <input type=\"text\" name=\"name\" id=\"bookName\" placeholder=\"Enter Book's name\" required><br/>\r\n"
-                + "                    <label for=\"bookAuthor\">Book Author : </label><input type=\"text\" name=\"author\" id=\"bookAuthor\" placeholder=\"Enter Author's Name\" required><br/>\r\n"
-                + "                    <label for=\"bookPrice\">Book Price : </label><input type=\"number\" name=\"price\" placeholder=\"Enter the Price\" required><br/>\r\n"
-                + "                    <label for=\"bookQuantity\">Book Qnty : </label><input type=\"number\" name=\"quantity\" id=\"bookQuantity\" placeholder=\"Enter the quantity\" required><br/>\r\n"
-                + "                    <input class=\"btn btn-success my-2\" type=\"submit\" value=\" Add Book \">\r\n"
-                + "                </form>\r\n"
-                + "            </td>\r\n"
-                + "        </tr>  \r\n"
-                + "        <!-- <tr>\r\n"
-                + "            <td><a href=\"index.html\">Go Back To Home Page</a></td>\r\n"
-                + "        </tr> -->\r\n"
-                + "    </table>";
+
+    private static void showAddBookForm(PrintWriter pw, String bookCode, String bookName, String bookAuthor, String bookPrice, String message, boolean isSuccess) {
+        String dismissScript = "<script>"
+                + "setTimeout(function(){ document.getElementById('successMessage').style.display = 'none'; }, 5000);"
+                + "function dismissMessage() { document.getElementById('successMessage').style.display = 'none'; }"
+                + "</script>";
+
+        String messageHtml = "";
+        if (message != null && !message.trim().isEmpty()) {
+            String alertClass = isSuccess ? "alert-success" : "alert-danger";
+            messageHtml = "<div id=\"successMessage\" class=\"alert " + alertClass + " alert-dismissible\" role=\"alert\">"
+                    + message
+                    + "<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\" onclick=\"dismissMessage()\">"
+                    + "<span aria-hidden=\"true\">&times;</span></button></div>";
+        }
+
+        String form = "<style>"
+                + ".form-label { display: block; margin-bottom: 8px; font-weight: bold; }"
+                + ".form-input { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #ccc; }"
+                + ".form-container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; }"
+                + "</style>"
+                + dismissScript
+                + "<div class='form-container'>"
+                + messageHtml
+                + "<form action=\"addbook\" method=\"post\">"
+                + "<div><label for=\"bookCode\" class=\"form-label\">Book Code:</label><input type=\"text\" name=\"bookCode\" id=\"bookCode\" class=\"form-input\" placeholder=\"Enter Book Code\" value=\"" + bookCode + "\"></div>"
+                + "<div><label for=\"bookName\" class=\"form-label\">Book Name:</label><input type=\"text\" name=\"name\" id=\"bookName\" class=\"form-input\" placeholder=\"Enter Book's name\" value=\"" + bookName + "\" required></div>"
+                + "<div><label for=\"bookAuthor\" class=\"form-label\">Book Author:</label><input type=\"text\" name=\"author\" id=\"bookAuthor\" class=\"form-input\" placeholder=\"Enter Author's Name\" value=\"" + bookAuthor + "\" required></div>"
+                + "<div><label for=\"bookPrice\" class=\"form-label\">Book Price:</label><input type=\"number\" name=\"price\" class=\"form-input\" placeholder=\"Enter the Price\" value=\"" + bookPrice + "\" required></div>"
+                + "<div><label for=\"bookQuantity\" class=\"form-label\">Book Quantity:</label><input type=\"number\" name=\"quantity\" id=\"bookQuantity\" class=\"form-input\" placeholder=\"Enter the quantity\" value=\"" + bookPrice + "\" required></div>"
+                + "<div><input class=\"btn btn-success my-2\" type=\"submit\" value=\"Add Book\"></div>"
+                + "</form>"
+                + "</div>";
+
         pw.println(form);
     }
 }
