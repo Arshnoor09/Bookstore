@@ -19,7 +19,7 @@ import com.bittercode.service.BookService;
 import com.bittercode.service.impl.BookServiceImpl;
 import com.bittercode.util.StoreUtil;
 
-public class ProcessPaymentServlet extends HttpServlet {
+public class ViewOrdersServlet extends HttpServlet {
 
     BookService bookService = new BookServiceImpl();
 
@@ -36,40 +36,61 @@ public class ProcessPaymentServlet extends HttpServlet {
         }
 
         try {
+            RequestDispatcher rd = req.getRequestDispatcher("CustomerHome.html");
+            rd.include(req, res);
+
+            StoreUtil.setActiveTab(pw, "orders");
+
+            pw.println("<div id='topmid' class='p-3 mb-3 bg-primary text-white rounded text-center fs-4 fw-bold shadow'>Your Orders</div>");
+
             HttpSession session = req.getSession();
-            List<Cart> cartItems = null;
+            Map<String, List<Cart>> orderHistory = (Map<String, List<Cart>>) session.getAttribute("orderHistory");
 
-            if (session.getAttribute("cartItems") != null) {
-                cartItems = (List<Cart>) session.getAttribute("cartItems");
-                
-                // Process each book in cart
-                for (Cart cart : cartItems) {
-                    Book book = cart.getBook();
-                    String bCode = book.getBarcode();
-                    int availableQty = book.getQuantity();
-                    int qtToBuy = cart.getQuantity();
-                    availableQty = availableQty - qtToBuy;
-                    bookService.updateBookQtyById(bCode, availableQty);
-                }
-
-                // Store orders in session
-                String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-                Map<String, List<Cart>> orderHistory = (Map<String, List<Cart>>) session.getAttribute("orderHistory");
-                if (orderHistory == null) {
-                    orderHistory = new TreeMap<>(Collections.reverseOrder());
-                }
-                orderHistory.put(currentDate, new ArrayList<>(cartItems));
-                session.setAttribute("orderHistory", orderHistory);
-
-                // Clear cart
-                session.removeAttribute("cartItems");
-                session.removeAttribute("amountToPay");
-                session.removeAttribute("items");
-                session.removeAttribute("selectedBookId");
+            if (orderHistory == null || orderHistory.isEmpty()) {
+                pw.println("<div class='container my-4'>");
+                pw.println("<div class='alert alert-info text-center'>");
+                pw.println("<h4>No orders found</h4>");
+                pw.println("<p>You haven't placed any orders yet.</p>");
+                pw.println("</div></div>");
+                return;
             }
 
-            // Redirect to orders view
-            res.sendRedirect("orders");
+            // Display orders grouped by date
+            for (Map.Entry<String, List<Cart>> entry : orderHistory.entrySet()) {
+                String orderDate = entry.getKey();
+                List<Cart> orders = entry.getValue();
+                
+                // Calculate total amount for this date
+                double totalAmount = 0;
+                for (Cart cart : orders) {
+                    totalAmount += cart.getBook().getPrice() * cart.getQuantity();
+                }
+
+                // Display date header and total
+                pw.println("<div class='container my-4'>");
+                pw.println("<div class='card mb-4'>");
+                pw.println("<div class='card-header bg-light'>");
+                pw.println("<div class='d-flex justify-content-between align-items-center'>");
+                pw.println("<h5 class='mb-0'>Order Date: " + orderDate + "</h5>");
+                pw.println("<h5 class='mb-0 text-success'>Total Amount: &#8377;" + String.format("%.2f", totalAmount) + "</h5>");
+                pw.println("</div></div>");
+                pw.println("<div class='card-body'>");
+                pw.println("<div class='row row-cols-1 row-cols-md-2 g-4'>");
+
+                // Display individual orders
+                for (Cart cart : orders) {
+                    Book book = cart.getBook();
+                    double bPrice = book.getPrice();
+                    String bCode = book.getBarcode();
+                    String bName = book.getName();
+                    String bAuthor = book.getAuthor();
+                    int availableQty = book.getQuantity();
+                    int qtToBuy = cart.getQuantity();
+                    pw.println(this.addBookToCard(bCode, bName, bAuthor, bPrice, qtToBuy, availableQty));
+                }
+
+                pw.println("</div></div></div></div>");
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -77,8 +98,6 @@ public class ProcessPaymentServlet extends HttpServlet {
     }
 
     public String addBookToCard(String bCode, String bName, String bAuthor, double bPrice, int quantity, int bQty) {
-        String button = "<a href=\"#\" class=\"btn btn-success mt-2 w-100\">Order Placed</a>";
-
         return "<div class=\"col\">\r\n"
                 + "  <div class=\"card shadow-lg h-100\">\r\n"
                 + "    <div class=\"row g-0\">\r\n"
@@ -94,11 +113,10 @@ public class ProcessPaymentServlet extends HttpServlet {
                 + "          <p class=\"card-text mb-1\"><strong>Quantity Ordered:</strong> " + quantity + "</p>\r\n"
                 + "          <p class=\"card-text mb-1\"><strong>Amount Paid:</strong> <span class=\"text-success\">&#8377; " + String.format("%.2f", bPrice * quantity) + "</span></p>\r\n"
                 + "          <p class=\"card-text mb-1\"><strong>Quantity Available Now:</strong> " + bQty + "</p>\r\n"
-                + button + "\r\n"
                 + "        </div>\r\n"
                 + "      </div>\r\n"
                 + "    </div>\r\n"
                 + "  </div>\r\n"
                 + "</div>";
     }
-}
+} 

@@ -1,4 +1,3 @@
-
 package servlets;
 
 import java.io.IOException;
@@ -22,36 +21,25 @@ public class CustomerLoginServlet extends HttpServlet {
     UserService authService = new UserServiceImpl();
 
     public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException, ServletException {
+        res.setContentType("text/html; charset=UTF-8"); // ✅ Very important for emoji rendering
         PrintWriter pw = res.getWriter();
-        res.setContentType(BookStoreConstants.CONTENT_TYPE_TEXT_HTML);
+
         String uName = req.getParameter(UsersDBConstants.COLUMN_USERNAME);
         String pWord = req.getParameter(UsersDBConstants.COLUMN_PASSWORD);
         User user = authService.login(UserRole.CUSTOMER, uName, pWord, req.getSession());
 
         try {
-
             if (user != null) {
-
-                RequestDispatcher rd = req.getRequestDispatcher("CustomerHome.html");
-                rd.include(req, res);
-                pw.println("    <div id=\"topmid\"><h1>Welcome to Online <br>Book Store</h1></div>\r\n"
-                        + "    <br>\r\n"
-                        + "    <table class=\"tab\">\r\n"
-                        + "        <tr>\r\n"
-                        + "            <td><p>Welcome "+user.getFirstName()+", Happy Learning !!</p></td>\r\n"
-                        + "        </tr>\r\n"
-                        + "    </table>");
-
+                // Successful login, simply redirect
+                res.sendRedirect("CustomerLanding.html");  // ✅ No include, no extra println
             } else {
-
+                // Failed login, stay on login page and show error
                 RequestDispatcher rd = req.getRequestDispatcher("CustomerLogin.html");
                 rd.include(req, res);
                 pw.println("<table class=\"tab\"><tr><td>Incorrect UserName or PassWord</td></tr></table>");
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
 }
