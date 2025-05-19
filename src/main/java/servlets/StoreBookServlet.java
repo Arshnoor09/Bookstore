@@ -2,10 +2,11 @@ package servlets;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.List;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
+import java.util.*;
+import java.util.stream.Collectors;
+import javax.servlet.*;
 import javax.servlet.http.*;
+
 import com.bittercode.model.Book;
 import com.bittercode.model.UserRole;
 import com.bittercode.service.BookService;
@@ -14,7 +15,6 @@ import com.bittercode.util.StoreUtil;
 
 public class StoreBookServlet extends HttpServlet {
 
-    // Book service for database operations
     BookService bookService = new BookServiceImpl();
 
     @Override
@@ -22,7 +22,46 @@ public class StoreBookServlet extends HttpServlet {
         res.setContentType("text/html");
         PrintWriter pw = res.getWriter();
 
-        // Check if the seller is logged in. If not, redirect to login.
+        boolean isAjax = "true".equalsIgnoreCase(req.getParameter("ajax"));
+
+        List<Book> books = bookService.getAllBooks();
+
+        // Filter and sort
+        String search = req.getParameter("search");
+        String sortBy = req.getParameter("sort");
+
+        if (search != null && !search.trim().isEmpty()) {
+            String keyword = search.trim().toLowerCase();
+            books = books.stream()
+                    .filter(b -> b.getBarcode().toLowerCase().contains(keyword) ||
+                                 b.getName().toLowerCase().contains(keyword) ||
+                                 b.getAuthor().toLowerCase().contains(keyword))
+                    .collect(Collectors.toList());
+        }
+
+        if ("price_asc".equalsIgnoreCase(sortBy)) {
+            books.sort(Comparator.comparingDouble(Book::getPrice));
+        } else if ("price_desc".equalsIgnoreCase(sortBy)) {
+            books.sort(Comparator.comparingDouble(Book::getPrice).reversed());
+        } else if ("quantity_asc".equalsIgnoreCase(sortBy)) {
+            books.sort(Comparator.comparingInt(Book::getQuantity));
+        } else if ("quantity_desc".equalsIgnoreCase(sortBy)) {
+            books.sort(Comparator.comparingInt(Book::getQuantity).reversed());
+        }
+
+        if (isAjax) {
+            // Only return updated table body
+            if (books == null || books.isEmpty()) {
+                pw.println("<tr><td colspan='6' class='text-center'>No books found</td></tr>");
+            } else {
+                for (Book book : books) {
+                    pw.println(getRowData(book));
+                }
+            }
+            return;
+        }
+
+        // Normal page rendering
         if (!StoreUtil.isLoggedIn(UserRole.SELLER, req.getSession())) {
             RequestDispatcher rd = req.getRequestDispatcher("SellerLogin.html");
             rd.include(req, res);
@@ -30,18 +69,14 @@ public class StoreBookServlet extends HttpServlet {
             return;
         }
 
-        // Include common header or navigation (SellerHome.html) at the top
         RequestDispatcher rd = req.getRequestDispatcher("SellerHome.html");
         rd.include(req, res);
 
-        // Start a main container below the nav
         pw.println("<div class='container mt-4'>");
 
-        // Check if a delete action was requested.
         String action = req.getParameter("action");
         String bookIdParam = req.getParameter("bookId");
         if ("delete".equalsIgnoreCase(action) && bookIdParam != null && !bookIdParam.trim().isEmpty()) {
-            // Call deletion method from your service layer.
             String responseCode = bookService.deleteBookById(bookIdParam.trim());
             if ("SUCCESS".equalsIgnoreCase(responseCode)) {
                 pw.println("<div class='alert alert-success text-center'>Book Removed Successfully</div>");
@@ -49,72 +84,76 @@ public class StoreBookServlet extends HttpServlet {
                 pw.println("<div class='alert alert-danger text-center'>Failed to remove book. Book not available.</div>");
             }
         }
-        
-        // Mark the active tab as storebooks (using your StoreUtil)
+
         StoreUtil.setActiveTab(pw, "storebooks");
 
-        // Improved header for Book Listing – using a card header
+        // Search and sort form
         pw.println("<div class='card mb-4 shadow-sm'>"
                 + "<div class='card-header bg-primary text-white text-center'>"
                 + "<h3 class='mb-0'>Books Available in the Store</h3>"
-                + "</div>"
-                + "<div class='card-body'>");
+                + "</div><div class='card-body'>");
 
-        List<Book> books = bookService.getAllBooks();
+        pw.println("<div class='row mb-3'>"
+                + "<div class='col-md-6'>"
+                + "<input type='text' class='form-control' id='searchBox' placeholder='Search by Book ID, Name, Author' />"
+                + "</div>"
+                + "<div class='col-md-3'>"
+                + "<select class='form-control' id='sortBy'>"
+                + "<option value=''>Sort By</option>"
+                + "<option value='price_asc'>Price: Low to High</option>"
+                + "<option value='price_desc'>Price: High to Low</option>"
+                + "<option value='quantity_asc'>Quantity: Low to High</option>"
+                + "<option value='quantity_desc'>Quantity: High to Low</option>"
+                + "</select>"
+                + "</div>"
+                + "</div>");
+
+        pw.println("<table class='table table-hover'>");
+        pw.println("<thead class='thead-dark'><tr>"
+                + "<th>Book ID</th><th>Name</th><th>Author</th><th>Price</th><th>Quantity</th><th>Action</th>"
+                + "</tr></thead><tbody id='bookTableBody'>");
+
         if (books == null || books.isEmpty()) {
-            pw.println("<div class='alert alert-info text-center'>No Books Available in the Store</div>");
+            pw.println("<tr><td colspan='6' class='text-center'>No books available</td></tr>");
         } else {
-            // Create a table for books
-            pw.println("<table class='table table-hover'>");
-            pw.println("<thead class='thead-dark'><tr>"
-                    + "<th scope='col'>BookId</th>"
-                    + "<th scope='col'>Name</th>"
-                    + "<th scope='col'>Author</th>"
-                    + "<th scope='col'>Price</th>"
-                    + "<th scope='col'>Quantity</th>"
-                    + "<th scope='col'>Action</th>"
-                    + "</tr></thead><tbody>");
             for (Book book : books) {
                 pw.println(getRowData(book));
             }
-            pw.println("</tbody></table>");
         }
-        
-        // Close card-body and card container
-        pw.println("</div></div>");
-        
-        // Close the main container
-        pw.println("</div>");
+
+        pw.println("</tbody></table></div></div></div>");
+
+        // JavaScript for AJAX filtering/sorting
+        pw.println("<script src='https://code.jquery.com/jquery-3.6.0.min.js'></script>");
+        pw.println("<script>"
+                + "function loadBooks() {"
+                + "  const search = $('#searchBox').val();"
+                + "  const sort = $('#sortBy').val();"
+                + "  $.post('storebooks?ajax=true', { search, sort }, function(data) {"
+                + "    $('#bookTableBody').html(data);"
+                + "  });"
+                + "}"
+                + "$('#searchBox').on('input', loadBooks);"
+                + "$('#sortBy').on('change', loadBooks);"
+                + "</script>");
     }
 
-    /**
-     * Generates a table row for a given book with Update and Delete actions side by side using a flex container.
-     */
     public String getRowData(Book book) {
         return "<tr>"
-                + "<th scope='row'>" + book.getBarcode() + "</th>"
+                + "<th>" + book.getBarcode() + "</th>"
                 + "<td>" + book.getName() + "</td>"
                 + "<td>" + book.getAuthor() + "</td>"
-                // Keep the rupee symbol and number on the same line using a span
-                + "<td><span>&#8377; " + book.getPrice() + "</span></td>"
+                + "<td>&#8377; " + book.getPrice() + "</td>"
                 + "<td>" + book.getQuantity() + "</td>"
-                + "<td>"
-                    // Flex container for buttons with a gap (using Bootstrap d-flex and a custom style)
-                    + "<div class='d-flex' style='gap:5px;'>"
-                        // Update form pointing to the update servlet
-                        + "<form method='post' action='updatebook' style='margin:0;'>"
-                            + "<input type='hidden' name='bookId' value='" + book.getBarcode() + "'/>"
-                            + "<button type='submit' class='btn btn-success btn-sm'>Update</button>"
-                        + "</form>"
-                        // Delete form handled by this same servlet
-                        + "<form method='post' action='storebooks' style='margin:0;'>"
-                            + "<input type='hidden' name='bookId' value='" + book.getBarcode() + "'/>"
-                            + "<input type='hidden' name='action' value='delete'/>"
-                            + "<button type='submit' class='btn btn-danger btn-sm' "
-                            + "onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</button>"
-                        + "</form>"
-                    + "</div>"
-                + "</td>"
-                + "</tr>";
+                + "<td><div class='d-flex' style='gap:5px;'>"
+                + "<form method='post' action='updatebook' style='margin:0;'>"
+                + "<input type='hidden' name='bookId' value='" + book.getBarcode() + "'/>"
+                + "<button class='btn btn-success btn-sm'>Update</button>"
+                + "</form>"
+                + "<form method='post' action='storebooks' style='margin:0;'>"
+                + "<input type='hidden' name='bookId' value='" + book.getBarcode() + "'/>"
+                + "<input type='hidden' name='action' value='delete'/>"
+                + "<button class='btn btn-danger btn-sm' onclick=\"return confirm('Delete this book?')\">Delete</button>"
+                + "</form></div></td></tr>";
     }
 }
